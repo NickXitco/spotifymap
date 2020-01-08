@@ -2,9 +2,9 @@ import java.io.*;
 import java.util.*;
 
 public class SortDatabase {
-    private static final String inputFileSorted = "artists_with_genres_sorted.txt";
-    private static final String inputFileToBeSorted = "database.txt";
-    private static final String outputFile = "database_sorted.txt";
+    private static final String inputFileSorted = "databases/artists_with_genres_sorted.txt";
+    private static final String inputFileToBeSorted = "databases/database.txt";
+    private static final String outputFile = "databases/database_sorted.txt";
 
     public static void main(String[] args) throws IOException {
         BufferedReader bfReaderSorted = new BufferedReader(new FileReader(new File(inputFileSorted)));

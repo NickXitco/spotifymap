@@ -2,9 +2,9 @@ import java.io.*;
 import java.util.*;
 
 public class ZZero {
-    private static final String inputDatabase = "database_sorted.txt";
-    private static final String inputArtists = "artist_with_genres_sorted.txt";
-    private static final String outputFile = "z0.txt";
+    private static final String inputDatabase = "databases/database_sorted.txt";
+    private static final String inputArtists = "databases/artist_with_genres_sorted.txt";
+    private static final String outputFile = "layers/z0.txt";
 
     public static void main(String[] args) throws IOException {
         BufferedReader bfDatabase = new BufferedReader(new FileReader(new File(inputDatabase)));

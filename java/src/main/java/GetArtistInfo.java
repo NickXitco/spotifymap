@@ -3,7 +3,6 @@ import com.wrapper.spotify.exceptions.detailed.BadGatewayException;
 import com.wrapper.spotify.exceptions.detailed.ServiceUnavailableException;
 import com.wrapper.spotify.exceptions.detailed.TooManyRequestsException;
 import com.wrapper.spotify.model_objects.specification.Artist;
-import com.wrapper.spotify.requests.data.artists.GetArtistRequest;
 import com.wrapper.spotify.requests.data.artists.GetSeveralArtistsRequest;
 
 import java.io.*;
@@ -12,8 +11,8 @@ import java.util.LinkedList;
 import java.util.concurrent.TimeUnit;
 
 public class GetArtistInfo {
-    private static final String inputFile = "artists.txt";
-    private static final String outputFile = "artists_with_genres.txt";
+    private static final String inputFile = "databases/artists.txt";
+    private static final String outputFile = "databases/artists_with_genres.txt";
     private static final int TOKEN_REFRESH_RATE = 10000;
 
     public static void main(String[] args) throws IOException, InterruptedException {

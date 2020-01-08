@@ -2,8 +2,8 @@ import java.io.*;
 import java.util.*;
 
 public class GenreSort {
-    private static final String inputFile = "artists_with_genres.txt";
-    private static final String outputFile = "genre_stats.txt";
+    private static final String inputFile = "databases/artists_with_genres.txt";
+    private static final String outputFile = "databases/genre_stats.txt";
 
     public static void main(String[] args) throws IOException {
         BufferedReader bfReader = new BufferedReader(new FileReader(new File(inputFile)));

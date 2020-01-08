@@ -30,8 +30,8 @@ public class Crawler {
     //nobody, this first node shouldn't matter, and that the major spotify
     //artist network as a whole is fully connected.
     private static final String firstArtist = "0LcJLqbBmaGUft1e9Mm8HV"; //ABBA
-    private static final String inputFile = "database.txt";
-    private static final String outputFile = "database.txt";
+    private static final String inputFile = "databases/database.txt";
+    private static final String outputFile = "databases/database.txt";
     private static final int PROGRESS_STEP = 100;
     private static final int TOKEN_REFRESH_RATE = 10000;
 

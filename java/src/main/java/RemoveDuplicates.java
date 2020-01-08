@@ -7,8 +7,8 @@ import java.io.IOException;
 
 public class RemoveDuplicates {
     public static void main(String args[]) throws IOException {
-        BufferedReader bfReader = new BufferedReader(new FileReader(new File("database.txt")));
-        BufferedWriter bfWriter = new BufferedWriter(new FileWriter(new File("trimmed_database.txt"), true));
+        BufferedReader bfReader = new BufferedReader(new FileReader(new File("databases/database.txt")));
+        BufferedWriter bfWriter = new BufferedWriter(new FileWriter(new File("databases/trimmed_database.txt"), true));
 
         String lastUniqueID = "";
 

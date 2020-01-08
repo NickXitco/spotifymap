@@ -1,9 +1,9 @@
 import java.io.*;
 
 public class TopArtistInGenre {
-    private static final String genres = "genre_stats.txt";
-    private static final String artists = "artists_with_genres.txt";
-    private static final String outputFile = "top_artists.txt";
+    private static final String genres = "databases/genre_stats.txt";
+    private static final String artists = "databases/artists_with_genres.txt";
+    private static final String outputFile = "databases/top_artists.txt";
 
     public static void main(String[] args) throws IOException {
         BufferedReader genresReader = new BufferedReader(new FileReader(new File(genres)));

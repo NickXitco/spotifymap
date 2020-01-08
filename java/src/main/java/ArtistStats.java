@@ -4,7 +4,7 @@ import java.io.FileReader;
 import java.io.IOException;
 
 public class ArtistStats {
-    private static final String inputFile = "artists_with_genres.txt";
+    private static final String inputFile = "databases/artists_with_genres.txt";
 
     public static void main(String[] args) throws IOException {
         BufferedReader bfReader = new BufferedReader(new FileReader(new File(inputFile)));

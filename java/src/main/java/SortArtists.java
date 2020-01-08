@@ -3,8 +3,8 @@ import java.util.Comparator;
 import java.util.LinkedList;
 
 public class SortArtists {
-    private static final String inputFile = "artists_with_genres.txt";
-    private static final String outputFile = "artists_with_genres_sorted.txt";
+    private static final String inputFile = "databases/artists_with_genres.txt";
+    private static final String outputFile = "databases/artists_with_genres_sorted.txt";
 
     public static void main(String[] args) throws IOException {
         BufferedReader bfReader = new BufferedReader(new FileReader(new File(inputFile)));

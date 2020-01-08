@@ -1,8 +1,8 @@
 import java.io.*;
 
 public class GetArtists {
-    private static final String inputFile = "database.txt";
-    private static final String outputFile = "artists.txt";
+    private static final String inputFile = "databases/database.txt";
+    private static final String outputFile = "databases/artists.txt";
 
     public static void main(String[] args) throws IOException {
         BufferedReader bfReader = new BufferedReader(new FileReader(new File(inputFile)));
