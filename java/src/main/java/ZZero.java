@@ -3,7 +3,7 @@ import java.util.*;
 
 public class ZZero {
     private static final String inputDatabase = "databases/database_sorted.txt";
-    private static final String inputArtists = "databases/artist_with_genres_sorted.txt";
+    private static final String inputArtists = "databases/artists_with_genres_sorted.txt";
     private static final String outputFile = "layers/z0.txt";
 
     public static void main(String[] args) throws IOException {
@@ -24,18 +24,20 @@ public class ZZero {
         HashMap<Artist, HashSet<Artist>> artistsInMap = new HashMap<>();
         HashSet<HashSet<Artist>> connectedComponents = getAllConnectedComponents(artistsInMap);
 
-        for (int i = 0; (i < 500 || (connectedComponents.size() == 1 && artistsInMap.size() > 1)); i++) {
+        for (int i = 0; i < artists.size() && (i < 500 || !(connectedComponents.size() == 1 && artistsInMap.size() > 1)); i++) {
             Artist artist = artists.get(i);
             Artist connectedArtist = getConnectedArtist(artist, artistsInMap);
 
+            HashSet<Artist> cc;
             if (connectedArtist == null) {
-                HashSet<Artist> cc = new HashSet<>();
-                cc.add(artist);
-                artistsInMap.put(artist, cc);
+                cc = new HashSet<>();
                 connectedComponents.add(cc);
+
             } else {
-                artistsInMap.put(artist, artistsInMap.get(connectedArtist));
+                cc = artistsInMap.get(connectedArtist);
             }
+            cc.add(artist);
+            artistsInMap.put(artist, cc);
         }
 
 
@@ -73,7 +75,9 @@ public class ZZero {
 
         String line;
 
-        while ((line = bfArtists.readLine()) != null) {
+
+        int j = 0;
+        while (((line = bfArtists.readLine()) != null) && j < 1000) {
             String[] split = line.split("\\|");
 
             String name = split[0];
@@ -86,9 +90,11 @@ public class ZZero {
             genres.addAll(Arrays.asList(split).subList(4, split.length));
 
             artists.put(id, new Artist(name, id, followers, popularity, genres));
+            j++;
         }
 
-        while ((line = bfDatabase.readLine()) != null) {
+        j = 0;
+        while ((line = bfDatabase.readLine()) != null && j < 1000) {
             String[] split = line.split("\\|");
             String id = split[1];
 
@@ -109,6 +115,7 @@ public class ZZero {
                     artists.put(split[i], b);
                 }
             }
+            j++;
         }
 
         LinkedList<Artist> artistLinkedList = new LinkedList<>(artists.values());
@@ -130,6 +137,7 @@ public class ZZero {
             this.followers = followers;
             this.popularity = popularity;
             this.genres = genres;
+            this.relatedArtists = new LinkedList<>();
         }
 
         @Override
