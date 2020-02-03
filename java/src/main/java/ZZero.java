@@ -12,32 +12,53 @@ public class ZZero {
         BufferedWriter bfWriter = new BufferedWriter(new FileWriter(new File(outputFile), false));
 
         LinkedList<Artist> artists = getArtists(bfDatabase, bfArtists);
-        HashMap<Artist, HashSet<Artist>> artistsInMap = completeZ0(artists);
+        HashMap<Artist, ConnectedComponent> artistsInMap = completeZ0(artists);
         printArtists(artistsInMap, bfWriter);
 
     }
 
-    private static void printArtists(HashMap<Artist, HashSet<Artist>> artistsInMap, BufferedWriter bfWriter) {
+    private static void printArtists(HashMap<Artist, ConnectedComponent> artistsInMap, BufferedWriter bfWriter) {
     }
 
-    private static HashMap<Artist, HashSet<Artist>> completeZ0(LinkedList<Artist> artists) {
-        HashMap<Artist, HashSet<Artist>> artistsInMap = new HashMap<>();
-        HashSet<HashSet<Artist>> connectedComponents = getAllConnectedComponents(artistsInMap);
+    private static HashMap<Artist, ConnectedComponent> completeZ0(LinkedList<Artist> artists) {
+        HashMap<Artist, ConnectedComponent> artistsInMap = new HashMap<>();
+        HashSet<ConnectedComponent> connectedComponents = new HashSet<>();
 
-        for (int i = 0; i < artists.size() && (i < 500 || !(connectedComponents.size() == 1 && artistsInMap.size() > 1)); i++) {
+        for (int i = 0; i < 100000; i++) { //artists.size() && (i < 500 || !(connectedComponents.size() == 1 && artistsInMap.size() > 1))
             Artist artist = artists.get(i);
-            Artist connectedArtist = getConnectedArtist(artist, artistsInMap);
-
-            HashSet<Artist> cc;
-            if (connectedArtist == null) {
-                cc = new HashSet<>();
-                connectedComponents.add(cc);
-
-            } else {
-                cc = artistsInMap.get(connectedArtist);
-            }
-            cc.add(artist);
+            ConnectedComponent cc = new ConnectedComponent(artist, artist.relatedArtists);
             artistsInMap.put(artist, cc);
+            connectedComponents.add(cc);
+
+            for (ConnectedComponent c : new LinkedList<>(connectedComponents)) {
+                if (c == cc) continue;
+
+                if (c.guestList.contains(artist)) {
+                    for (Artist member : c.members) {
+                        artistsInMap.replace(member, cc);
+                    }
+                    connectedComponents.remove(c);
+                    cc.members.addAll(c.members);
+                    c.guestList.remove(artist);
+                    cc.guestList.addAll(c.guestList);
+                }
+            }
+
+            for (ConnectedComponent c : new LinkedList<>(connectedComponents)) {
+                if (c == cc) continue;
+
+                for (Artist a : c.members) {
+                    if (artist.relatedArtists.contains(a)) {
+                        for (Artist member : c.members) {
+                            artistsInMap.replace(member, cc);
+                        }
+                        connectedComponents.remove(c);
+                        cc.members.addAll(c.members);
+                        c.guestList.remove(artist);
+                        cc.guestList.addAll(c.guestList);
+                    }
+                }
+            }
         }
 
 
@@ -51,33 +72,13 @@ public class ZZero {
         return artistsInMap;
     }
 
-    private static HashSet<HashSet<Artist>> getAllConnectedComponents(HashMap<Artist, HashSet<Artist>> artistsInMap) {
-        HashSet<HashSet<Artist>> connectedComponents = new HashSet<>();
-
-        for (Artist a : artistsInMap.keySet()) {
-            connectedComponents.add(artistsInMap.get(a));
-        }
-
-        return connectedComponents;
-    }
-
-    private static Artist getConnectedArtist(Artist artist, HashMap<Artist, HashSet<Artist>> artistsInMap) {
-        for (Artist a : artist.relatedArtists) {
-            if (artistsInMap.containsKey(a)) {
-                return a;
-            }
-        }
-        return null;
-    }
-
     private static LinkedList<Artist> getArtists(BufferedReader bfDatabase, BufferedReader bfArtists) throws IOException {
         HashMap<String, Artist> artists = new HashMap<>();
 
         String line;
 
 
-        int j = 0;
-        while (((line = bfArtists.readLine()) != null) && j < 1000) {
+        while (((line = bfArtists.readLine()) != null)) {
             String[] split = line.split("\\|");
 
             String name = split[0];
@@ -90,11 +91,9 @@ public class ZZero {
             genres.addAll(Arrays.asList(split).subList(4, split.length));
 
             artists.put(id, new Artist(name, id, followers, popularity, genres));
-            j++;
         }
 
-        j = 0;
-        while ((line = bfDatabase.readLine()) != null && j < 1000) {
+        while ((line = bfDatabase.readLine()) != null) {
             String[] split = line.split("\\|");
             String id = split[1];
 
@@ -115,12 +114,22 @@ public class ZZero {
                     artists.put(split[i], b);
                 }
             }
-            j++;
         }
 
         LinkedList<Artist> artistLinkedList = new LinkedList<>(artists.values());
         artistLinkedList.sort(Comparator.comparingInt((Artist a) -> a.followers).reversed());
-        return artistLinkedList;
+
+        //DEBUG START
+        LinkedList<Artist> smallerArtistLinkedList = new LinkedList<>();
+        for (Artist a : artistLinkedList) {
+            smallerArtistLinkedList.add(a);
+            if (smallerArtistLinkedList.size() > 100000) break;
+        }
+        smallerArtistLinkedList.sort(Comparator.comparingInt((Artist a) -> a.followers).reversed());
+        return smallerArtistLinkedList;
+        //DEBUG END
+
+        //return artistLinkedList;
     }
 
     private static class Artist {
@@ -153,4 +162,17 @@ public class ZZero {
             return Objects.hash(this.id);
         }
     }
+
+    private static class ConnectedComponent {
+        HashSet<Artist> members;
+        HashSet<Artist> guestList; //related artists to any artist in the CC who are not yet members
+
+        ConnectedComponent(Artist head, List<Artist> guestList) {
+            this.members = new HashSet<>();
+            this.guestList = new HashSet<>();
+            this.members.add(head);
+            this.guestList.addAll(guestList);
+        }
+    }
+
 }
