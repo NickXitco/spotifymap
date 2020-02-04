@@ -5,6 +5,7 @@ public class ZZero {
     private static final String inputDatabase = "databases/database_sorted.txt";
     private static final String inputArtists = "databases/artists_with_genres_sorted.txt";
     private static final String outputFile = "layers/z0.txt";
+    private static final int TEMP_ARTIST_CAP = 100000;
 
     public static void main(String[] args) throws IOException {
         BufferedReader bfDatabase = new BufferedReader(new FileReader(new File(inputDatabase)));
@@ -24,7 +25,7 @@ public class ZZero {
         HashMap<Artist, ConnectedComponent> artistsInMap = new HashMap<>();
         HashSet<ConnectedComponent> connectedComponents = new HashSet<>();
 
-        for (int i = 0; i < 100000; i++) { //artists.size() && (i < 500 || !(connectedComponents.size() == 1 && artistsInMap.size() > 1))
+        for (int i = 0; i < TEMP_ARTIST_CAP; i++) { //artists.size() && (i < 500 || !(connectedComponents.size() == 1 && artistsInMap.size() > 1))
             Artist artist = artists.get(i);
             ConnectedComponent cc = new ConnectedComponent(artist, artist.relatedArtists);
             artistsInMap.put(artist, cc);
@@ -34,13 +35,7 @@ public class ZZero {
                 if (c == cc) continue;
 
                 if (c.guestList.contains(artist)) {
-                    for (Artist member : c.members) {
-                        artistsInMap.replace(member, cc);
-                    }
-                    connectedComponents.remove(c);
-                    cc.members.addAll(c.members);
-                    c.guestList.remove(artist);
-                    cc.guestList.addAll(c.guestList);
+                    mergeConnectedComponent(artistsInMap, connectedComponents, artist, cc, c);
                 }
             }
 
@@ -49,13 +44,7 @@ public class ZZero {
 
                 for (Artist a : c.members) {
                     if (artist.relatedArtists.contains(a)) {
-                        for (Artist member : c.members) {
-                            artistsInMap.replace(member, cc);
-                        }
-                        connectedComponents.remove(c);
-                        cc.members.addAll(c.members);
-                        c.guestList.remove(artist);
-                        cc.guestList.addAll(c.guestList);
+                        mergeConnectedComponent(artistsInMap, connectedComponents, artist, cc, c);
                     }
                 }
             }
@@ -70,6 +59,16 @@ public class ZZero {
 
 
         return artistsInMap;
+    }
+
+    private static void mergeConnectedComponent(HashMap<Artist, ConnectedComponent> artistsInMap, HashSet<ConnectedComponent> connectedComponents, Artist artist, ConnectedComponent ccBase, ConnectedComponent ccToBeMerged) {
+        for (Artist member : ccToBeMerged.members) {
+            artistsInMap.replace(member, ccBase);
+        }
+        connectedComponents.remove(ccToBeMerged);
+        ccBase.members.addAll(ccToBeMerged.members);
+        ccToBeMerged.guestList.remove(artist);
+        ccBase.guestList.addAll(ccToBeMerged.guestList);
     }
 
     private static LinkedList<Artist> getArtists(BufferedReader bfDatabase, BufferedReader bfArtists) throws IOException {
@@ -123,7 +122,7 @@ public class ZZero {
         LinkedList<Artist> smallerArtistLinkedList = new LinkedList<>();
         for (Artist a : artistLinkedList) {
             smallerArtistLinkedList.add(a);
-            if (smallerArtistLinkedList.size() > 100000) break;
+            if (smallerArtistLinkedList.size() > TEMP_ARTIST_CAP) break;
         }
         smallerArtistLinkedList.sort(Comparator.comparingInt((Artist a) -> a.followers).reversed());
         return smallerArtistLinkedList;
