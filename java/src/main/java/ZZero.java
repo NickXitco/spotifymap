@@ -12,41 +12,65 @@ public class ZZero {
         BufferedReader bfArtists = new BufferedReader(new FileReader(new File(inputArtists)));
         BufferedWriter bfWriter = new BufferedWriter(new FileWriter(new File(outputFile), false));
 
+        System.out.println("Getting artists from database...");
         LinkedList<Artist> artists = getArtists(bfDatabase, bfArtists);
-        HashMap<Artist, ConnectedComponent> artistsInMap = completeZ0(artists);
+        System.out.println("Creating clusters...");
+        HashSet<Artist> artistsInMap = completeZ0(artists);
         printArtists(artistsInMap, bfWriter);
 
     }
 
-    private static void printArtists(HashMap<Artist, ConnectedComponent> artistsInMap, BufferedWriter bfWriter) {
+    private static void printArtists(HashSet<Artist> artistsInMap, BufferedWriter bfWriter) {
     }
 
-    private static HashMap<Artist, ConnectedComponent> completeZ0(LinkedList<Artist> artists) {
-        HashMap<Artist, ConnectedComponent> artistsInMap = new HashMap<>();
-        HashSet<ConnectedComponent> connectedComponents = new HashSet<>();
+    private static HashSet<Artist> completeZ0(LinkedList<Artist> artists) {
+        HashSet<Artist> artistsInMap = new HashSet<>();
+        HashMap<Artist, LinkedList<ConnectedComponent>> guestList = new HashMap<>();
+        LinkedList<ConnectedComponent> connectedComponents = new LinkedList<>();
 
         for (int i = 0; i < TEMP_ARTIST_CAP; i++) { //artists.size() && (i < 500 || !(connectedComponents.size() == 1 && artistsInMap.size() > 1))
             Artist artist = artists.get(i);
-            ConnectedComponent cc = new ConnectedComponent(artist, artist.relatedArtists);
-            artistsInMap.put(artist, cc);
-            connectedComponents.add(cc);
+            artistsInMap.add(artist);
+            LinkedList<ConnectedComponent> invitedClusters = guestList.get(artist);
+            guestList.remove(artist);
+            if (invitedClusters != null) {
+                mergeClusters(artist, invitedClusters);
+            }
 
-            for (ConnectedComponent c : new LinkedList<>(connectedComponents)) {
-                if (c == cc) continue;
-
-                if (c.guestList.contains(artist)) {
-                    mergeConnectedComponent(artistsInMap, connectedComponents, artist, cc, c);
+            LinkedList<ConnectedComponent> relatedClusters = new LinkedList<>();
+            LinkedList<Artist> newGuests = new LinkedList<>();
+            for (Artist a : artist.relatedArtists) {
+                if (artistsInMap.contains(a)) {
+                    if (a.cc.beneficiary != artist.cc && a.cc.beneficiary != artist.cc.beneficiary) {
+                        relatedClusters.add(a.cc);
+                    }
+                } else {
+                    newGuests.add(a);
                 }
             }
 
-            for (ConnectedComponent c : new LinkedList<>(connectedComponents)) {
-                if (c == cc) continue;
+            if (relatedClusters.size() > 0) {
+                mergeClusters(artist, relatedClusters);
+            }
 
-                for (Artist a : c.members) {
-                    if (artist.relatedArtists.contains(a)) {
-                        mergeConnectedComponent(artistsInMap, connectedComponents, artist, cc, c);
-                    }
+            if (artist.cc == null) {
+                artist.cc = new ConnectedComponent(artist);
+                connectedComponents.add(artist.cc);
+            }
+
+            for (Artist newGuest : newGuests) {
+                LinkedList<ConnectedComponent> invitations = guestList.get(newGuest);
+                if (invitations == null) {
+                    LinkedList<ConnectedComponent> l = new LinkedList<>();
+                    l.add(artist.cc);
+                    guestList.put(newGuest, l);
+                } else {
+                    invitations.add(artist.cc);
                 }
+            }
+
+            if ((i + 1) % (TEMP_ARTIST_CAP / 100) == 0) {
+                System.out.println(((i + 1) / (TEMP_ARTIST_CAP / 100)) + "% complete!");
             }
         }
 
@@ -61,14 +85,22 @@ public class ZZero {
         return artistsInMap;
     }
 
-    private static void mergeConnectedComponent(HashMap<Artist, ConnectedComponent> artistsInMap, HashSet<ConnectedComponent> connectedComponents, Artist artist, ConnectedComponent ccBase, ConnectedComponent ccToBeMerged) {
-        for (Artist member : ccToBeMerged.members) {
-            artistsInMap.replace(member, ccBase);
+    private static void mergeClusters(Artist artist, LinkedList<ConnectedComponent> invitedClusters) {
+        ConnectedComponent largest = invitedClusters.getFirst();
+        for (ConnectedComponent cc : invitedClusters) {
+            if (cc.members.size() > largest.members.size()) {
+                largest = cc;
+            }
         }
-        connectedComponents.remove(ccToBeMerged);
-        ccBase.members.addAll(ccToBeMerged.members);
-        ccToBeMerged.guestList.remove(artist);
-        ccBase.guestList.addAll(ccToBeMerged.guestList);
+
+        largest.members.add(artist);
+        artist.cc = largest;
+
+        for (ConnectedComponent cc : invitedClusters) {
+            if (cc != largest) {
+                cc.beneficiary = largest;
+            }
+        }
     }
 
     private static LinkedList<Artist> getArtists(BufferedReader bfDatabase, BufferedReader bfArtists) throws IOException {
@@ -138,6 +170,7 @@ public class ZZero {
         int popularity;
         LinkedList<String> genres;
         LinkedList<Artist> relatedArtists;
+        ConnectedComponent cc;
 
         Artist(String name, String id, int followers, int popularity, LinkedList<String> genres) {
             this.name = name;
@@ -162,15 +195,14 @@ public class ZZero {
         }
     }
 
+
     private static class ConnectedComponent {
         HashSet<Artist> members;
-        HashSet<Artist> guestList; //related artists to any artist in the CC who are not yet members
+        ConnectedComponent beneficiary; //The cc that this component gives its members to once it's been merged. This is done to massively speed up computation and keep the algorithm running in linear time.
 
-        ConnectedComponent(Artist head, List<Artist> guestList) {
+        ConnectedComponent(Artist head) {
             this.members = new HashSet<>();
-            this.guestList = new HashSet<>();
             this.members.add(head);
-            this.guestList.addAll(guestList);
         }
     }
 
