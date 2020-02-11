@@ -5,7 +5,6 @@ public class ZZero {
     private static final String inputDatabase = "databases/database_sorted.txt";
     private static final String inputArtists = "databases/artists_with_genres_sorted.txt";
     private static final String outputFile = "layers/z0.txt";
-    private static final int TEMP_ARTIST_CAP = 100000;
 
     public static void main(String[] args) throws IOException {
         BufferedReader bfDatabase = new BufferedReader(new FileReader(new File(inputDatabase)));
@@ -15,92 +14,89 @@ public class ZZero {
         System.out.println("Getting artists from database...");
         LinkedList<Artist> artists = getArtists(bfDatabase, bfArtists);
         System.out.println("Creating clusters...");
-        HashSet<Artist> artistsInMap = completeZ0(artists);
+        HashMap<Artist, ConnectedComponent> artistsInMap = completeZ0(artists);
         printArtists(artistsInMap, bfWriter);
 
     }
 
-    private static void printArtists(HashSet<Artist> artistsInMap, BufferedWriter bfWriter) {
+    private static void printArtists(HashMap<Artist, ConnectedComponent> artistsInMap, BufferedWriter bfWriter) {
     }
 
-    private static HashSet<Artist> completeZ0(LinkedList<Artist> artists) {
-        HashSet<Artist> artistsInMap = new HashSet<>();
+    private static HashMap<Artist, ConnectedComponent> completeZ0(LinkedList<Artist> artists) {
+        HashMap<Artist, ConnectedComponent> artistsInMap = new HashMap<>();
         HashMap<Artist, LinkedList<ConnectedComponent>> guestList = new HashMap<>();
-        LinkedList<ConnectedComponent> connectedComponents = new LinkedList<>();
+        HashSet<ConnectedComponent> connectedComponents = new HashSet<>();
 
-        for (int i = 0; i < TEMP_ARTIST_CAP; i++) { //artists.size() && (i < 500 || !(connectedComponents.size() == 1 && artistsInMap.size() > 1))
-            Artist artist = artists.get(i);
-            artistsInMap.add(artist);
-            LinkedList<ConnectedComponent> invitedClusters = guestList.get(artist);
+        int noArtists = artists.size();
+
+        int i = 0;
+        for (Artist artist : artists) {//artists.size() && (i < 500 || !(connectedComponents.size() == 1 && artistsInMap.size() > 1))
+            ConnectedComponent cc = new ConnectedComponent(artist);
+            artistsInMap.put(artist, cc);
+            LinkedList<ConnectedComponent> invitations = guestList.get(artist);
             guestList.remove(artist);
-            if (invitedClusters != null) {
-                mergeClusters(artist, invitedClusters);
+            connectedComponents.add(cc);
+
+            if (invitations != null) {
+                for (ConnectedComponent k : invitations) {
+                    ConnectedComponent topK = bubbleUp(k);
+                    if (topK != cc) {
+                        cc.members.merge(topK.members);
+                        topK.dead = true;
+                        topK.beneficiary = cc;
+                        connectedComponents.remove(topK);
+                    }
+                }
             }
 
-            LinkedList<ConnectedComponent> relatedClusters = new LinkedList<>();
-            LinkedList<Artist> newGuests = new LinkedList<>();
-            for (Artist a : artist.relatedArtists) {
-                if (artistsInMap.contains(a)) {
-                    if (a.cc.beneficiary != artist.cc && a.cc.beneficiary != artist.cc.beneficiary) {
-                        relatedClusters.add(a.cc);
+            for (Artist r : artist.relatedArtists) {
+                ConnectedComponent rCC = artistsInMap.get(r);
+                if (rCC != null) {
+                    ConnectedComponent topRCC = bubbleUp(rCC);
+                    if (topRCC != cc) {
+                        artistsInMap.replace(r, cc);
+                        cc.members.merge(topRCC.members);
+                        topRCC.dead = true;
+                        topRCC.beneficiary = cc;
+                        connectedComponents.remove(topRCC);
                     }
                 } else {
-                    newGuests.add(a);
+                    if (guestList.containsKey(r)) {
+                        guestList.get(r).add(cc);
+                    } else {
+                        LinkedList<ConnectedComponent> l = new LinkedList<>();
+                        l.add(cc);
+                        guestList.put(r, l);
+                    }
                 }
             }
 
-            if (relatedClusters.size() > 0) {
-                mergeClusters(artist, relatedClusters);
+            i++;
+            if ((i) % (noArtists/ 100) == 0) {
+                System.out.println(((i) / (noArtists / 100)) + "% complete! (" + i + "/" + noArtists + ")");
             }
+        }
 
-            if (artist.cc == null) {
-                artist.cc = new ConnectedComponent(artist);
-                connectedComponents.add(artist.cc);
-            }
-
-            for (Artist newGuest : newGuests) {
-                LinkedList<ConnectedComponent> invitations = guestList.get(newGuest);
-                if (invitations == null) {
-                    LinkedList<ConnectedComponent> l = new LinkedList<>();
-                    l.add(artist.cc);
-                    guestList.put(newGuest, l);
-                } else {
-                    invitations.add(artist.cc);
-                }
-            }
-
-            if ((i + 1) % (TEMP_ARTIST_CAP / 100) == 0) {
-                System.out.println(((i + 1) / (TEMP_ARTIST_CAP / 100)) + "% complete!");
+        ConnectedComponent largest = connectedComponents.iterator().next();
+        for (ConnectedComponent cc : connectedComponents) {
+            cc.cementedList = cc.members.getList();
+            if (cc.cementedList.size() > largest.cementedList.size()) {
+                largest = cc;
             }
         }
 
 
         //TODO find the minimum spanning tree
-
         //TODO count the leaves in the tree. If there are less than (artistsInMap.size() - 500) leaves, then add more artists, maybe another 500? idk man lol
-
         //TODO sort those leaves by followers and remove them from the map in ascending follower order until we have 500 artists that are connected :) yay
-
-
         return artistsInMap;
     }
 
-    private static void mergeClusters(Artist artist, LinkedList<ConnectedComponent> invitedClusters) {
-        ConnectedComponent largest = invitedClusters.getFirst();
-        for (ConnectedComponent cc : invitedClusters) {
-            if (cc.members.size() > largest.members.size()) {
-                largest = cc;
-            }
+    private static ConnectedComponent bubbleUp(ConnectedComponent k) {
+        while (k.beneficiary != null) {
+            k = k.beneficiary;
         }
-
-        largest.members.add(artist);
-        artist.cc = largest;
-
-        for (ConnectedComponent cc : invitedClusters) {
-            if (cc != largest) {
-                cc.beneficiary = largest;
-            }
-        }
+        return k;
     }
 
     private static LinkedList<Artist> getArtists(BufferedReader bfDatabase, BufferedReader bfArtists) throws IOException {
@@ -149,18 +145,7 @@ public class ZZero {
 
         LinkedList<Artist> artistLinkedList = new LinkedList<>(artists.values());
         artistLinkedList.sort(Comparator.comparingInt((Artist a) -> a.followers).reversed());
-
-        //DEBUG START
-        LinkedList<Artist> smallerArtistLinkedList = new LinkedList<>();
-        for (Artist a : artistLinkedList) {
-            smallerArtistLinkedList.add(a);
-            if (smallerArtistLinkedList.size() > TEMP_ARTIST_CAP) break;
-        }
-        smallerArtistLinkedList.sort(Comparator.comparingInt((Artist a) -> a.followers).reversed());
-        return smallerArtistLinkedList;
-        //DEBUG END
-
-        //return artistLinkedList;
+        return artistLinkedList;
     }
 
     private static class Artist {
@@ -170,7 +155,8 @@ public class ZZero {
         int popularity;
         LinkedList<String> genres;
         LinkedList<Artist> relatedArtists;
-        ConnectedComponent cc;
+        Artist next;
+        Artist prev;
 
         Artist(String name, String id, int followers, int popularity, LinkedList<String> genres) {
             this.name = name;
@@ -197,12 +183,47 @@ public class ZZero {
 
 
     private static class ConnectedComponent {
-        HashSet<Artist> members;
+        MembersList members;
         ConnectedComponent beneficiary; //The cc that this component gives its members to once it's been merged. This is done to massively speed up computation and keep the algorithm running in linear time.
+        boolean dead = false;
+        LinkedList<Artist> cementedList;
 
         ConnectedComponent(Artist head) {
-            this.members = new HashSet<>();
-            this.members.add(head);
+            this.members = new MembersList(head);
+        }
+    }
+
+    private static class MembersList {
+        Artist head;
+        Artist tail;
+
+        MembersList(Artist a) {
+            this.head = a;
+            this.tail = a;
+        }
+
+        LinkedList<Artist> getList() {
+            LinkedList<Artist> list = new LinkedList<>();
+            Artist current = this.head;
+            while (current != null) {
+                list.add(current);
+                current = current.next;
+            }
+            return list;
+        }
+
+        void add(Artist a) {
+            this.tail.next = a;
+            a.prev = this.tail;
+            this.tail = a;
+        }
+
+        void merge(MembersList toBeMerged) {
+            toBeMerged.head.prev = this.tail;
+            this.tail.next = toBeMerged.head;
+            this.tail = toBeMerged.tail;
+            toBeMerged.head = null;
+            toBeMerged.tail = null;
         }
     }
 
