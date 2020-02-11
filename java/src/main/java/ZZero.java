@@ -1,5 +1,6 @@
 import java.io.*;
 import java.util.*;
+import java.util.function.ToIntFunction;
 
 public class ZZero {
     private static final String inputDatabase = "databases/database_sorted.txt";
@@ -14,26 +15,51 @@ public class ZZero {
         System.out.println("Getting artists from database...");
         LinkedList<Artist> artists = getArtists(bfDatabase, bfArtists);
         System.out.println("Creating clusters...");
-        HashMap<Artist, ConnectedComponent> artistsInMap = completeZ0(artists);
+        HashMap<Artist, Element> artistsInMap = completeZ0(artists);
         printArtists(artistsInMap, bfWriter);
 
     }
 
-    private static void printArtists(HashMap<Artist, ConnectedComponent> artistsInMap, BufferedWriter bfWriter) {
+    private static void printArtists(HashMap<Artist, Element> artistsInMap, BufferedWriter bfWriter) {
     }
 
-    private static HashMap<Artist, ConnectedComponent> completeZ0(LinkedList<Artist> artists) {
-        HashMap<Artist, ConnectedComponent> artistsInMap = new HashMap<>();
-        HashMap<Artist, LinkedList<Artist>> guestList = new HashMap<>();
-        LinkedList<ConnectedComponent> connectedComponents = new LinkedList<>();
+    private static HashMap<Artist, Element> completeZ0(LinkedList<Artist> artists) {
+        HashMap<Artist, Element> artistsInMap = new HashMap<>();
+        HashMap<Artist, LinkedList<Element>> guestList = new HashMap<>();
 
         int noArtists = artists.size();
         int i = 0;
-        for (Artist artist : artists) {//artists.size() && (i < 500 || !(connectedComponents.size() == 1 && artistsInMap.size() > 1))
-            ConnectedComponent cc = new ConnectedComponent(artist);
+        for (Artist artist : artists) {
+            //Neat statistics you could try later:
+            //The element e added is always going to be the root or child to the root, so you can easily get the size of the component each time
+            //You could also try adding in every artist to an element and then unionizing everything together at once instead of inline.
+            Element e = artistsInMap.get(artist);
+            if (e == null) {
+                e = new Element(artist);
+                artistsInMap.put(artist, e);
+            }
+
             for (Artist r : artist.relatedArtists) {
-                if (artistsInMap.containsKey(r)) {
-                    artistsInMap.replace(r, cc);
+                Element er = artistsInMap.get(r);
+                if (er != null) {
+                    union(e, er);
+                } else {
+                    LinkedList<Element> rInvites = guestList.get(r);
+                    if (rInvites == null) {
+                        rInvites = new LinkedList<>();
+                        rInvites.add(e);
+                        guestList.put(r, rInvites);
+                    } else {
+                        rInvites.add(e);
+                    }
+                }
+            }
+
+            LinkedList<Element> invitations = guestList.get(artist);
+            guestList.remove(artist);
+            if (invitations != null) {
+                for (Element invite : invitations) {
+                    union(e, invite);
                 }
             }
 
@@ -43,11 +69,52 @@ public class ZZero {
             }
         }
 
+        LinkedList<LinkedList<Artist>> flattenedComponents = flatten(artistsInMap);
+        flattenedComponents.sort(Comparator.comparingInt((ToIntFunction<LinkedList>) LinkedList::size).reversed());
 
         //TODO find the minimum spanning tree
         //TODO count the leaves in the tree. If there are less than (artistsInMap.size() - 500) leaves, then add more artists, maybe another 500? idk man lol
         //TODO sort those leaves by followers and remove them from the map in ascending follower order until we have 500 artists that are connected :) yay
         return artistsInMap;
+    }
+
+    private static LinkedList<LinkedList<Artist>> flatten(HashMap<Artist, Element> artistsInMap) {
+        HashMap<Artist, LinkedList<Artist>> listify = new HashMap<>();
+        for (Element e : artistsInMap.values()) {
+            Element root = find(e);
+            LinkedList<Artist> list = listify.get(root.artist);
+            if (list == null) {
+                list = new LinkedList<>();
+                list.add(e.artist);
+                listify.put(root.artist, list);
+            } else {
+                list.add(e.artist);
+            }
+        }
+        return new LinkedList<>(listify.values());
+    }
+
+    private static Element find(Element e) {
+        if (e.parent != e) {
+            e.parent = find(e.parent);
+        }
+        return e.parent;
+    }
+
+    private static void union(Element x, Element y) {
+        Element xRoot = find(x);
+        Element yRoot = find(y);
+
+        if (xRoot == yRoot) return;
+
+        if (xRoot.size < yRoot.size) {
+            Element temp1 = xRoot;
+            xRoot = yRoot;
+            yRoot = temp1;
+        }
+
+        yRoot.parent = xRoot;
+        xRoot.size = xRoot.size + yRoot.size;
     }
 
     private static LinkedList<Artist> getArtists(BufferedReader bfDatabase, BufferedReader bfArtists) throws IOException {
@@ -130,14 +197,16 @@ public class ZZero {
         }
     }
 
+    private static class Element {
+        Artist artist;
+        Element parent;
+        int size;
 
-    private static class ConnectedComponent {
-        LinkedList<Artist> members;
-
-        ConnectedComponent(Artist head) {
-            this.members = new LinkedList<>();
-            this.members.add(head);
+        Element(Artist a) {
+            this.artist = a;
+            this.parent = this;
+            this.size = 1;
         }
-    }
 
+    }
 }
